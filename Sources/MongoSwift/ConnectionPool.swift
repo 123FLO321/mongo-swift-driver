@@ -110,4 +110,31 @@ internal class ConnectionPool {
             fatalError("ConnectionPool was already closed")
         }
     }
+
+    /// Temporary API to allow for enabling SSL for tests. This will change in SWIFT-471.
+    internal func setSSLOpts(keyFile: String, caFile: String) throws {
+        print("setting SSL opts")
+        print("key file: \(keyFile)")
+        print("ca file: \(caFile)")
+        var opts = mongoc_ssl_opt_t()
+        opts.allow_invalid_hostname = true
+        opts.weak_cert_validation = true
+
+        try keyFile.withCString { keyPtr in
+            opts.pem_file = keyPtr
+            // try caFile.withCString { caPtr in
+            //     opts.ca_file = caPtr
+
+            switch self.mode {
+            case let .single(clientHandle):
+                mongoc_client_set_ssl_opts(clientHandle, &opts)
+            case let .pooled(pool):
+                print("setting opts on pool")
+                mongoc_client_pool_set_ssl_opts(pool, &opts)
+            case .none:
+                throw RuntimeError.internalError(message: "ConnectionPool was already closed")
+            }
+            //}
+        }
+    }
 }

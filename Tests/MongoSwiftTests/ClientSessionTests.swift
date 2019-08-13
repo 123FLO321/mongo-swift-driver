@@ -6,7 +6,7 @@ import XCTest
 final class ClientSessionTests: MongoSwiftTestCase {
     override func tearDown() {
         do {
-            let client = try MongoClient(MongoSwiftTestCase.connStr)
+            let client = try MongoClient()
             try client.db(type(of: self).testDatabase).drop()
         } catch let ServerError.commandError(code, _, _, _) where code == 26 {
             // skip database not found errors
@@ -88,7 +88,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
 
     /// Sessions spec test 1: Test that sessions are properly returned to the pool when ended.
     func testSessionCleanup() throws {
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
 
         var sessionA: ClientSession? = try client.startSession()
         expect(sessionA!.active).to(beTrue())
@@ -169,7 +169,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
     /// Sessions spec test 3: test that every function that takes a session parameter passes the sends implicit and
     /// explicit lsids to server.
     func testSessionArguments() throws {
-        let client1 = try MongoClient(MongoSwiftTestCase.connStr, options: ClientOptions(eventMonitoring: true))
+        let client1 = try MongoClient(options: ClientOptions(eventMonitoring: true))
         client1.enableMonitoring(forEvents: .commandMonitoring)
 
         let database = client1.db(type(of: self).testDatabase)
@@ -184,8 +184,8 @@ final class ClientSessionTests: MongoSwiftTestCase {
     /// Sessions spec test 4: test that a session can only be used with db's and collections that were derived from the
     /// same client.
     func testSessionClientValidation() throws {
-        let client1 = try MongoClient(MongoSwiftTestCase.connStr)
-        let client2 = try MongoClient(MongoSwiftTestCase.connStr)
+        let client1 = try MongoClient()
+        let client2 = try MongoClient()
 
         let database = client1.db(type(of: self).testDatabase)
         let collection = try database.createCollection(self.getCollectionName())
@@ -199,7 +199,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
 
     /// Sessions spec test 5: Test that inactive sessions cannot be used.
     func testInactiveSession() throws {
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
         let db = client.db(type(of: self).testDatabase)
         let collection = try db.createCollection(self.getCollectionName())
         let session1 = try client.startSession()
@@ -225,7 +225,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
 
     /// Sessions spec test 10: Test cursors have the same lsid in the initial find command and in subsequent getMores.
     func testSessionCursor() throws {
-        let client = try MongoClient(MongoSwiftTestCase.connStr, options: ClientOptions(eventMonitoring: true))
+        let client = try MongoClient(options: ClientOptions(eventMonitoring: true))
         client.enableMonitoring(forEvents: .commandMonitoring)
 
         let database = client.db(type(of: self).testDatabase)
@@ -294,7 +294,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
             return
         }
 
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
 
         try client.withSession { session in
             expect(session.clusterTime).to(beNil())
@@ -319,7 +319,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
         }
 
         let center = NotificationCenter.default
-        let client = try MongoClient(MongoSwiftTestCase.connStr, options: ClientOptions(eventMonitoring: true))
+        let client = try MongoClient(options: ClientOptions(eventMonitoring: true))
         client.enableMonitoring()
         let db = client.db(type(of: self).testDatabase)
         let collection = try db.createCollection(self.getCollectionName())
@@ -474,7 +474,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
         }
 
         let center = NotificationCenter.default
-        let client = try MongoClient(MongoSwiftTestCase.connStr, options: ClientOptions(eventMonitoring: true))
+        let client = try MongoClient(options: ClientOptions(eventMonitoring: true))
         client.enableMonitoring()
         let db = client.db(type(of: self).testDatabase)
         let collection = db.collection(self.getCollectionName())
@@ -521,7 +521,7 @@ final class ClientSessionTests: MongoSwiftTestCase {
     /// Test causal consistent behavior that is expected on any topology, regardless of whether it supports cluster time
     func testCausalConsistencyAnyTopology() throws {
         let center = NotificationCenter.default
-        let client = try MongoClient(MongoSwiftTestCase.connStr, options: ClientOptions(eventMonitoring: true))
+        let client = try MongoClient(options: ClientOptions(eventMonitoring: true))
         client.enableMonitoring()
         let db = client.db(type(of: self).testDatabase)
         let collection = db.collection(self.getCollectionName())

@@ -438,7 +438,7 @@ final class ReadWriteConcernTests: MongoSwiftTestCase {
                                                            result: expectedBulkResult,
                                                            errorLabels: nil)
 
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
         let database = client.db(type(of: self).testDatabase)
         let collection = database.collection(self.getCollectionName())
         defer { try? collection.drop() }

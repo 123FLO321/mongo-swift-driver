@@ -74,7 +74,7 @@ final class RetryableWritesTests: MongoSwiftTestCase, FailPointConfigured {
         }
 
         for testFile in tests {
-            let setupClient = try MongoClient(MongoSwiftTestCase.connStr)
+            let setupClient = try MongoClient()
             let version = try setupClient.serverVersion()
 
             if let requirements = testFile.runOn {
@@ -89,7 +89,7 @@ final class RetryableWritesTests: MongoSwiftTestCase, FailPointConfigured {
                 print("Executing test: \(test.description)")
 
                 let clientOptions = test.clientOptions ?? ClientOptions(retryWrites: true)
-                let client = try MongoClient(MongoSwiftTestCase.connStr, options: clientOptions)
+                let client = try MongoClient(options: clientOptions)
                 let db = client.db(type(of: self).testDatabase)
                 let collection = db.collection(self.getCollectionName(suffix: test.description))
 

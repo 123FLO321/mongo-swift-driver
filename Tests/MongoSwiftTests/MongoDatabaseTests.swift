@@ -8,14 +8,14 @@ final class MongoDatabaseTests: MongoSwiftTestCase {
     }
 
     override func tearDown() {
-        guard let client = try? MongoClient(MongoSwiftTestCase.connStr) else {
+        guard let client = try? MongoClient() else {
             return
         }
         try? client.db(type(of: self).testDatabase).drop()
     }
 
     func testMongoDatabase() throws {
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
         let db = client.db(type(of: self).testDatabase)
 
         let command: Document = ["create": self.getCollectionName(suffix: "1")]
@@ -81,7 +81,7 @@ final class MongoDatabaseTests: MongoSwiftTestCase {
     }
 
     func testCreateCollection() throws {
-        let client = try MongoClient(MongoSwiftTestCase.connStr)
+        let client = try MongoClient()
         let db = client.db(type(of: self).testDatabase)
 
         let indexOpts: Document =

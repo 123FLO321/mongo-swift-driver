@@ -64,6 +64,23 @@ class MongoSwiftTestCase: XCTestCase {
         return "mongodb://127.0.0.1/"
     }
 
+    /// Indicates that we are running the tests with SSL enabled, determined by the environment variable $SSL.
+    static var ssl: Bool {
+        return ProcessInfo.processInfo.environment["SSL"] == "ssl"
+    }
+
+    /// Returns the path where the SSL key file is located, determined by the environment variable $SSL_PEM_FILE.
+    static var sslKeyFilePath: String? {
+        guard self.ssl else { return nil }
+        return ProcessInfo.processInfo.environment["SSL_KEY_FILE"]
+    }
+
+    /// Returns the path where the SSL CA file is located, determined by the environment variable $SSL_CA_FILE..
+    static var sslCAFilePath: String? {
+        guard self.ssl else { return nil }
+        return ProcessInfo.processInfo.environment["SSL_CA_FILE"]
+    }
+
     // indicates whether we are running on a 32-bit platform
     static let is32Bit = Int.bsonType == .int32
 
@@ -111,7 +128,28 @@ extension MongoClient {
     }
 
     internal convenience init(options: ClientOptions? = nil) throws {
-        try self.init(MongoSwiftTestCase.connStr, options: options)
+        var uri = MongoSwiftTestCase.connStr
+        if MongoSwiftTestCase.ssl {
+            uri += "&ssl=true"
+            uri += "&sslCertificateAuthorityFile=/Users/kaitlinmahar/code/drivers/mongo-orchestration/tests/lib/ca.pem"
+            uri += "&sslClientCertificateKeyFile=/Users/kaitlinmahar/code/drivers/mongo-orchestration/tests/lib/client.pem"
+            uri += "&sslAllowInvalidCertificates=true"
+            // guard let keyFilePath = MongoSwiftTestCase.sslKeyFilePath,
+            //     let caFilePath = MongoSwiftTestCase.sslCAFilePath else {
+            //     throw TestError(message: "SSL enabled, but missing path to key file and/or ca file")
+            // }
+            //try self.connectionPool.setSSLOpts(keyFile: keyFilePath, caFile: caFilePath)
+        }
+
+
+        try self.init(uri, options: options)
+        // if MongoSwiftTestCase.ssl {
+        //     guard let keyFilePath = MongoSwiftTestCase.sslKeyFilePath,
+        //         let caFilePath = MongoSwiftTestCase.sslCAFilePath else {
+        //         throw TestError(message: "SSL enabled, but missing path to key file and/or ca file")
+        //     }
+        //     //try self.connectionPool.setSSLOpts(keyFile: keyFilePath, caFile: caFilePath)
+        // }
     }
 }
 
