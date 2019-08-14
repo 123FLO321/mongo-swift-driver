@@ -130,26 +130,14 @@ extension MongoClient {
     internal convenience init(options: ClientOptions? = nil) throws {
         var uri = MongoSwiftTestCase.connStr
         if MongoSwiftTestCase.ssl {
-            uri += "&ssl=true"
-            uri += "&sslCertificateAuthorityFile=/Users/kaitlinmahar/code/drivers/mongo-orchestration/tests/lib/ca.pem"
-            uri += "&sslClientCertificateKeyFile=/Users/kaitlinmahar/code/drivers/mongo-orchestration/tests/lib/client.pem"
-            uri += "&sslAllowInvalidCertificates=true"
-            // guard let keyFilePath = MongoSwiftTestCase.sslKeyFilePath,
-            //     let caFilePath = MongoSwiftTestCase.sslCAFilePath else {
-            //     throw TestError(message: "SSL enabled, but missing path to key file and/or ca file")
-            // }
-            //try self.connectionPool.setSSLOpts(keyFile: keyFilePath, caFile: caFilePath)
+            guard let keyFilePath = MongoSwiftTestCase.sslKeyFilePath,
+                let caFilePath = MongoSwiftTestCase.sslCAFilePath else {
+                throw TestError(message: "SSL enabled, but missing path to key file and/or ca file")
+            }
+            try self.connectionPool.setSSLOpts(keyFile: keyFilePath, caFile: caFilePath)
         }
 
-
         try self.init(uri, options: options)
-        // if MongoSwiftTestCase.ssl {
-        //     guard let keyFilePath = MongoSwiftTestCase.sslKeyFilePath,
-        //         let caFilePath = MongoSwiftTestCase.sslCAFilePath else {
-        //         throw TestError(message: "SSL enabled, but missing path to key file and/or ca file")
-        //     }
-        //     //try self.connectionPool.setSSLOpts(keyFile: keyFilePath, caFile: caFilePath)
-        // }
     }
 }
 
