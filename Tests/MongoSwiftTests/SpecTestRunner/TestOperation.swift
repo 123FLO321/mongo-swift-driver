@@ -264,7 +264,7 @@ struct InsertMany: TestOperation {
 
 /// Wrapper around a `WriteModel` adding `Decodable` conformance.
 struct AnyWriteModel: Decodable {
-    let model: WriteModel
+    let model: WriteModel<Document>
 
     private enum CodingKeys: CodingKey {
         case name, arguments
@@ -275,19 +275,19 @@ struct AnyWriteModel: Decodable {
         let name = try container.decode(String.self, forKey: .name)
         switch name {
         case "insertOne":
-            self.model = try container.decode(InsertOneModel.self, forKey: .arguments)
+            self.model = .insertOne(try container.decode(InsertOneModel<Document>.self, forKey: .arguments))
         case "deleteOne":
-            self.model = try container.decode(DeleteOneModel.self, forKey: .arguments)
+            self.model = .deleteOne(try container.decode(DeleteOneModel.self, forKey: .arguments))
         case "deleteMany":
-            self.model = try container.decode(DeleteManyModel.self, forKey: .arguments)
+            self.model = .deleteMany(try container.decode(DeleteManyModel.self, forKey: .arguments))
         case "replaceOne":
-            self.model = try container.decode(ReplaceOneModel.self, forKey: .arguments)
+            self.model = .replaceOne(try container.decode(ReplaceOneModel<Document>.self, forKey: .arguments))
         case "updateOne":
-            self.model = try container.decode(UpdateOneModel.self, forKey: .arguments)
+            self.model = .updateOne(try container.decode(UpdateOneModel.self, forKey: .arguments))
         case "updateMany":
-            self.model = try container.decode(UpdateManyModel.self, forKey: .arguments)
+            self.model = .updateMany(try container.decode(UpdateManyModel.self, forKey: .arguments))
         default:
-            throw DecodingError.typeMismatch(WriteModel.self,
+            throw DecodingError.typeMismatch(WriteModel<Document>.self,
                                              DecodingError.Context(codingPath: decoder.codingPath,
                                                                    debugDescription: "Unknown write model: \(name)"))
         }

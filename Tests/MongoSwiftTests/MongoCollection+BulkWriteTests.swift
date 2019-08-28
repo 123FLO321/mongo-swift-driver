@@ -51,17 +51,10 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
         expect(try self.coll.bulkWrite([])).to(throwError(UserError.invalidArgumentError(message: "")))
     }
 
-    private typealias DeleteOneModel = MongoCollection<Document>.DeleteOneModel
-    private typealias DeleteManyModel = MongoCollection<Document>.DeleteManyModel
-    private typealias InsertOneModel = MongoCollection<Document>.InsertOneModel
-    private typealias ReplaceOneModel = MongoCollection<Document>.ReplaceOneModel
-    private typealias UpdateOneModel = MongoCollection<Document>.UpdateOneModel
-    private typealias UpdateManyModel = MongoCollection<Document>.UpdateManyModel
-
     func testInserts() throws {
-        let requests = [
-            InsertOneModel(["_id": 1, "x": 11]),
-            InsertOneModel(["x": 22])
+        let requests: [WriteModel<Document>] = [
+            .insertOne(InsertOneModel(["_id": 1, "x": 11])),
+            .insertOne(InsertOneModel(["x": 22]))
         ]
 
         let result: BulkWriteResult! = try self.coll.bulkWrite(requests)
@@ -71,7 +64,11 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
         expect(result.insertedIds[1]!).to(beAnInstanceOf(ObjectId.self))
 
         // verify inserted doc without _id was not modified.
-        expect(requests[1].document).to(equal(["x": 22]))
+        guard case let .insertOne(model) = requests[1] else {
+            fatalError("aaa")
+        }
+
+        expect(model.document).to(equal(["x": 22]))
 
         let cursor = try coll.find()
         expect(cursor.next()).to(equal(["_id": 1, "x": 11]))
@@ -88,10 +85,10 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
 
         try self.coll.insertOne(doc)
 
-        let requests: [WriteModel] = [
-            InsertOneModel(["_id": id2] as Document),
-            InsertOneModel(doc),
-            UpdateOneModel(filter: ["_id": id3], update: ["$set": ["asdfasdf": 1] as Document], upsert: true)
+        let requests: [WriteModel<Document>] = [
+            .insertOne(InsertOneModel(["_id": id2] as Document)),
+            .insertOne(InsertOneModel(doc)),
+            .updateOne(UpdateOneModel(filter: ["_id": id3], update: ["$set": ["asdfasdf": 1] as Document], upsert: true))
         ]
 
         let expectedResult = BulkWriteResult(
@@ -120,12 +117,12 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
     func testUpdates() throws {
         try createFixtures(4)
 
-        let requests: [WriteModel] = [
-            UpdateOneModel(filter: ["_id": 2], update: ["$inc": ["x": 1] as Document]),
-            UpdateManyModel(filter: ["_id": ["$gt": 2] as Document], update: ["$inc": ["x": -1] as Document]),
-            UpdateOneModel(filter: ["_id": 5], update: ["$set": ["x": 55] as Document], upsert: true),
-            UpdateOneModel(filter: ["x": 66], update: ["$set": ["x": 66] as Document], upsert: true),
-            UpdateManyModel(filter: ["x": ["$gt": 50] as Document], update: ["$inc": ["x": 1] as Document])
+        let requests: [WriteModel<Document>] = [
+            .updateOne(UpdateOneModel(filter: ["_id": 2], update: ["$inc": ["x": 1] as Document])),
+            .updateMany(UpdateManyModel(filter: ["_id": ["$gt": 2] as Document], update: ["$inc": ["x": -1] as Document])),
+            .updateOne(UpdateOneModel(filter: ["_id": 5], update: ["$set": ["x": 55] as Document], upsert: true)),
+            .updateOne(UpdateOneModel(filter: ["x": 66], update: ["$set": ["x": 66] as Document], upsert: true)),
+            .updateMany(UpdateManyModel(filter: ["x": ["$gt": 50] as Document], update: ["$inc": ["x": 1] as Document]))
         ]
 
         let result: BulkWriteResult! = try self.coll.bulkWrite(requests)
@@ -149,9 +146,9 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
     func testDeletes() throws {
         try createFixtures(4)
 
-        let requests: [WriteModel] = [
-            DeleteOneModel(["_id": 1]),
-            DeleteManyModel(["_id": ["$gt": 2] as Document])
+        let requests: [WriteModel<Document>] = [
+            .deleteOne(DeleteOneModel(["_id": 1])),
+            .deleteMany(DeleteManyModel(["_id": ["$gt": 2] as Document]))
         ]
 
         let result: BulkWriteResult! = try self.coll.bulkWrite(requests)
@@ -166,12 +163,12 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
     func testMixedOrderedOperations() throws {
         try createFixtures(3)
 
-        let requests: [WriteModel] = [
-            UpdateOneModel(filter: ["_id": ["$gt": 1] as Document], update: ["$inc": ["x": 1] as Document]),
-            UpdateManyModel(filter: ["_id": ["$gt": 1] as Document], update: ["$inc": ["x": 1] as Document]),
-            InsertOneModel(["_id": 4]),
-            DeleteManyModel(["x": ["$nin": [24, 34]] as Document]),
-            ReplaceOneModel(filter: ["_id": 4], replacement: ["_id": 4, "x": 44], upsert: true)
+        let requests: [WriteModel<Document>] = [
+            .updateOne(UpdateOneModel(filter: ["_id": ["$gt": 1] as Document], update: ["$inc": ["x": 1] as Document])),
+            .updateMany(UpdateManyModel(filter: ["_id": ["$gt": 1] as Document], update: ["$inc": ["x": 1] as Document])),
+            .insertOne(InsertOneModel(["_id": 4])),
+            .deleteMany(DeleteManyModel(["x": ["$nin": [24, 34]] as Document])),
+            .replaceOne(ReplaceOneModel(filter: ["_id": 4], replacement: ["_id": 4, "x": 44], upsert: true))
         ]
 
         let result: BulkWriteResult! = try self.coll.bulkWrite(requests)
@@ -195,8 +192,8 @@ final class MongoCollection_BulkWriteTests: MongoSwiftTestCase {
     }
 
     func testUnacknowledgedWriteConcern() throws {
-        let requests = [
-            InsertOneModel(["_id": 1])
+        let requests: [WriteModel<Document>] = [
+            .insertOne(InsertOneModel(["_id": 1]))
         ]
 
         let options = BulkWriteOptions(writeConcern: try WriteConcern(w: .number(0)))

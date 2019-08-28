@@ -20,7 +20,7 @@ extension MongoCollection {
      *   - `EncodingError` if an error occurs while encoding the `CollectionType` or the options to BSON.
      */
     @discardableResult
-    public func bulkWrite(_ requests: [WriteModel],
+    public func bulkWrite(_ requests: [WriteModel<CollectionType>],
                           options: BulkWriteOptions? = nil,
                           session: ClientSession? = nil) throws -> BulkWriteResult? {
         guard !requests.isEmpty else {
@@ -30,350 +30,350 @@ extension MongoCollection {
         let operation = BulkWriteOperation(collection: self, models: requests, options: options)
         return try self._client.executeOperation(operation, session: session)
     }
+}
 
-    private struct DeleteModelOptions: Encodable {
-        public let collation: Document?
+private struct DeleteModelOptions: Encodable {
+    public let collation: Document?
+}
+
+/// A model for a `deleteOne` operation within a bulk write.
+public struct DeleteOneModel: Decodable {
+    /// A `Document` representing the match criteria.
+    public let filter: Document
+
+    /// The collation to use.
+    public let collation: Document?
+
+    /**
+     * Create a `deleteOne` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - filter: A `Document` representing the match criteria.
+     *   - collation: Specifies a collation to use.
+     */
+    public init(_ filter: Document, collation: Document? = nil) {
+        self.filter = filter
+        self.collation = collation
     }
 
-    /// A model for a `deleteOne` operation within a bulk write.
-    public struct DeleteOneModel: Decodable {
-        /// A `Document` representing the match criteria.
-        public let filter: Document
+    /**
+     * Adds the `deleteOne` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     *   - `EncodingError` if an error occurs while encoding the options to BSON.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
+        let opts = try encoder.encode(DeleteModelOptions(collation: self.collation))
+        var error = bson_error_t()
 
-        /// The collation to use.
-        public let collation: Document?
-
-        /**
-         * Create a `deleteOne` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - filter: A `Document` representing the match criteria.
-         *   - collation: Specifies a collation to use.
-         */
-        public init(_ filter: Document, collation: Document? = nil) {
-            self.filter = filter
-            self.collation = collation
-        }
-
-        /**
-         * Adds the `deleteOne` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         *   - `EncodingError` if an error occurs while encoding the options to BSON.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
-            let opts = try encoder.encode(DeleteModelOptions(collation: self.collation))
-            var error = bson_error_t()
-
-            guard mongoc_bulk_operation_remove_one_with_opts(
-                bulk, self.filter._bson, opts._bson, &error) else {
-                throw extractMongoError(error: error) // Should be invalidArgumentError
-            }
+        guard mongoc_bulk_operation_remove_one_with_opts(
+            bulk, self.filter._bson, opts._bson, &error) else {
+            throw extractMongoError(error: error) // Should be invalidArgumentError
         }
     }
+}
 
-    /// A model for a `deleteMany` operation within a bulk write.
-    public struct DeleteManyModel: Decodable {
-        /// A `Document` representing the match criteria.
-        public let filter: Document
+/// A model for a `deleteMany` operation within a bulk write.
+public struct DeleteManyModel: Decodable {
+    /// A `Document` representing the match criteria.
+    public let filter: Document
 
-        /// The collation to use.
-        public let collation: Document?
+    /// The collation to use.
+    public let collation: Document?
 
-        /**
-         * Create a `deleteMany` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - filter: A `Document` representing the match criteria.
-         *   - collation: Specifies a collation to use.
-         */
-        public init(_ filter: Document, collation: Document? = nil) {
-            self.filter = filter
-            self.collation = collation
-        }
-
-        /**
-         * Adds the `deleteMany` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         *   - `EncodingError` if an error occurs while encoding the options to BSON.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
-            var error = bson_error_t()
-            let opts = try encoder.encode(DeleteModelOptions(collation: self.collation))
-
-            guard mongoc_bulk_operation_remove_many_with_opts(bulk, self.filter._bson, opts._bson, &error) else {
-                throw extractMongoError(error: error) // should be invalidArgumentError
-            }
-        }
+    /**
+     * Create a `deleteMany` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - filter: A `Document` representing the match criteria.
+     *   - collation: Specifies a collation to use.
+     */
+    public init(_ filter: Document, collation: Document? = nil) {
+        self.filter = filter
+        self.collation = collation
     }
 
-    /// A model for an `insertOne` operation within a bulk write.
-    public struct InsertOneModel: Decodable {
-        /// The `CollectionType` to insert.
-        public let document: CollectionType
+    /**
+     * Adds the `deleteMany` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     *   - `EncodingError` if an error occurs while encoding the options to BSON.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
+        var error = bson_error_t()
+        let opts = try encoder.encode(DeleteModelOptions(collation: self.collation))
 
-        /**
-         * Create an `insertOne` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - document: The `CollectionType` to insert.
-         */
-        public init(_ document: CollectionType) {
-            self.document = document
-        }
-
-        /**
-         * Adds the `insertOne` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `EncodingError` if an error occurs while encoding the `CollectionType` to BSON.
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws -> BSONValue {
-            let document = try encoder.encode(self.document).withID()
-            var error = bson_error_t()
-            guard mongoc_bulk_operation_insert_with_opts(bulk, document._bson, nil, &error) else {
-                throw extractMongoError(error: error) // should be invalidArgumentError
-            }
-
-            guard let insertedId = try document.getValue(for: "_id") else {
-                // we called `withID()`, so this should be present.
-                fatalError("Failed to get value for _id from document")
-            }
-
-            return insertedId
+        guard mongoc_bulk_operation_remove_many_with_opts(bulk, self.filter._bson, opts._bson, &error) else {
+            throw extractMongoError(error: error) // should be invalidArgumentError
         }
     }
+}
 
-    private struct ReplaceOneModelOptions: Encodable {
-        public let collation: Document?
-        public let upsert: Bool?
+/// A model for an `insertOne` operation within a bulk write.
+public struct InsertOneModel<T: Codable>: Decodable {
+    /// The `CollectionType` to insert.
+    public let document: T
+
+    /**
+     * Create an `insertOne` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - document: The `CollectionType` to insert.
+     */
+    public init(_ document: T) {
+        self.document = document
     }
 
-    /// A model for a `replaceOne` operation within a bulk write.
-    public struct ReplaceOneModel: Decodable {
-        /// A `Document` representing the match criteria.
-        public let filter: Document
-
-        /// The `CollectionType` to use as the replacement value.
-        public let replacement: CollectionType
-
-        /// The collation to use.
-        public let collation: Document?
-
-        /// When `true`, creates a new document if no document matches the query.
-        public let upsert: Bool?
-
-        /**
-         * Create a `replaceOne` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - filter: A `Document` representing the match criteria.
-         *   - replacement: The `CollectionType` to use as the replacement value.
-         *   - collation: Specifies a collation to use.
-         *   - upsert: When `true`, creates a new document if no document matches the query.
-         */
-        public init(filter: Document, replacement: CollectionType, collation: Document? = nil, upsert: Bool? = nil) {
-            self.filter = filter
-            self.replacement = replacement
-            self.collation = collation
-            self.upsert = upsert
+    /**
+     * Adds the `insertOne` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `EncodingError` if an error occurs while encoding the `CollectionType` to BSON.
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws -> BSONValue {
+        let document = try encoder.encode(self.document).withID()
+        var error = bson_error_t()
+        guard mongoc_bulk_operation_insert_with_opts(bulk, document._bson, nil, &error) else {
+            throw extractMongoError(error: error) // should be invalidArgumentError
         }
 
-        /**
-         * Adds the `replaceOne` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `EncodingError` if an error occurs while encoding the `CollectionType` or options to BSON.
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
-            let replacement = try encoder.encode(self.replacement)
-            let opts = try encoder.encode(ReplaceOneModelOptions(collation: self.collation, upsert: self.upsert))
-            var error = bson_error_t()
-
-            guard mongoc_bulk_operation_replace_one_with_opts(bulk,
-                                                              self.filter._bson,
-                                                              replacement._bson,
-                                                              opts._bson,
-                                                              &error) else {
-                throw extractMongoError(error: error) // should be invalidArgumentError
-            }
+        guard let insertedId = try document.getValue(for: "_id") else {
+            // we called `withID()`, so this should be present.
+            fatalError("Failed to get value for _id from document")
         }
+
+        return insertedId
+    }
+}
+
+private struct ReplaceOneModelOptions: Encodable {
+    public let collation: Document?
+    public let upsert: Bool?
+}
+
+/// A model for a `replaceOne` operation within a bulk write.
+public struct ReplaceOneModel<T: Codable>: Decodable {
+    /// A `Document` representing the match criteria.
+    public let filter: Document
+
+    /// The `CollectionType` to use as the replacement value.
+    public let replacement: T
+
+    /// The collation to use.
+    public let collation: Document?
+
+    /// When `true`, creates a new document if no document matches the query.
+    public let upsert: Bool?
+
+    /**
+     * Create a `replaceOne` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - filter: A `Document` representing the match criteria.
+     *   - replacement: The `CollectionType` to use as the replacement value.
+     *   - collation: Specifies a collation to use.
+     *   - upsert: When `true`, creates a new document if no document matches the query.
+     */
+    public init(filter: Document, replacement: T, collation: Document? = nil, upsert: Bool? = nil) {
+        self.filter = filter
+        self.replacement = replacement
+        self.collation = collation
+        self.upsert = upsert
     }
 
-    private struct UpdateModelOptions: Encodable {
-        public let arrayFilters: [Document]?
-        public let collation: Document?
-        public let upsert: Bool?
-    }
+    /**
+     * Adds the `replaceOne` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `EncodingError` if an error occurs while encoding the `CollectionType` or options to BSON.
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
+        let replacement = try encoder.encode(self.replacement)
+        let opts = try encoder.encode(ReplaceOneModelOptions(collation: self.collation, upsert: self.upsert))
+        var error = bson_error_t()
 
-    /// A model for an `updateOne` operation within a bulk write.
-    public struct UpdateOneModel: Decodable {
-        /// A `Document` representing the match criteria.
-        public let filter: Document
-
-        /// A `Document` containing update operators.
-        public let update: Document
-
-        /// A set of filters specifying to which array elements an update should apply.
-        public let arrayFilters: [Document]?
-
-        /// A collation to use.
-        public let collation: Document?
-
-        /// When `true`, creates a new document if no document matches the query.
-        public let upsert: Bool?
-
-        /**
-         * Create an `updateOne` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - filter: A `Document` representing the match criteria.
-         *   - update: A `Document` containing update operators.
-         *   - arrayFilters: A set of filters specifying to which array elements an update should apply.
-         *   - collation: Specifies a collation to use.
-         *   - upsert: When `true`, creates a new document if no document matches the query.
-         */
-        public init(filter: Document,
-                    update: Document,
-                    arrayFilters: [Document]? = nil,
-                    collation: Document? = nil,
-                    upsert: Bool? = nil) {
-            self.filter = filter
-            self.update = update
-            self.arrayFilters = arrayFilters
-            self.collation = collation
-            self.upsert = upsert
-        }
-
-        /**
-         * Adds the `updateOne` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `EncodingError` if an error occurs while encoding the options to BSON.
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
-            let opts = try encoder.encode(UpdateModelOptions(arrayFilters: self.arrayFilters,
-                                                                  collation: self.collation,
-                                                                  upsert: self.upsert))
-            var error = bson_error_t()
-
-            guard mongoc_bulk_operation_update_one_with_opts(bulk,
-                                                             self.filter._bson,
-                                                             self.update._bson,
-                                                             opts._bson,
-                                                             &error) else {
-                throw extractMongoError(error: error) // should be invalidArgumentError
-            }
+        guard mongoc_bulk_operation_replace_one_with_opts(bulk,
+                                                          self.filter._bson,
+                                                          replacement._bson,
+                                                          opts._bson,
+                                                          &error) else {
+            throw extractMongoError(error: error) // should be invalidArgumentError
         }
     }
+}
 
-    /// A model for an `updateMany` operation within a bulk write.
-    public struct UpdateManyModel: Decodable {
-        /// A `Document` representing the match criteria.
-        public let filter: Document
+private struct UpdateModelOptions: Encodable {
+    public let arrayFilters: [Document]?
+    public let collation: Document?
+    public let upsert: Bool?
+}
 
-        /// A `Document` containing update operators.
-        public let update: Document
+/// A model for an `updateOne` operation within a bulk write.
+public struct UpdateOneModel: Decodable {
+    /// A `Document` representing the match criteria.
+    public let filter: Document
 
-        /// A set of filters specifying to which array elements an update should apply.
-        public let arrayFilters: [Document]?
+    /// A `Document` containing update operators.
+    public let update: Document
 
-        /// A collation to use.
-        public let collation: Document?
+    /// A set of filters specifying to which array elements an update should apply.
+    public let arrayFilters: [Document]?
 
-        /// When `true`, creates a new document if no document matches the query.
-        public let upsert: Bool?
+    /// A collation to use.
+    public let collation: Document?
 
-        /**
-         * Create a `updateMany` operation for a bulk write.
-         *
-         * - Parameters:
-         *   - filter: A `Document` representing the match criteria.
-         *   - update: A `Document` containing update operators.
-         *   - arrayFilters: A set of filters specifying to which array elements an update should apply.
-         *   - collation: Specifies a collation to use.
-         *   - upsert: When `true`, creates a new document if no document matches the query.
-         */
-        public init(filter: Document,
-                    update: Document,
-                    arrayFilters: [Document]? = nil,
-                    collation: Document? = nil,
-                    upsert: Bool? = nil) {
-            self.filter = filter
-            self.update = update
-            self.arrayFilters = arrayFilters
-            self.collation = collation
-            self.upsert = upsert
-        }
+    /// When `true`, creates a new document if no document matches the query.
+    public let upsert: Bool?
 
-        /**
-         * Adds the `updateMany` operation to a bulk write.
-         *
-         * - Throws:
-         *   - `EncodingError` if an error occurs while encoding the options to BSON.
-         *   - `UserError.invalidArgumentError` if the options form an invalid combination.
-         */
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
-            let opts = try encoder.encode(UpdateModelOptions(arrayFilters: self.arrayFilters,
-                                                                  collation: self.collation,
-                                                                  upsert: self.upsert))
-            var error = bson_error_t()
-
-            guard mongoc_bulk_operation_update_many_with_opts(bulk,
-                                                              self.filter._bson,
-                                                              self.update._bson,
-                                                              opts._bson,
-                                                              &error) else {
-                throw extractMongoError(error: error) // should be invalidArgumentError
-            }
-        }
+    /**
+     * Create an `updateOne` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - filter: A `Document` representing the match criteria.
+     *   - update: A `Document` containing update operators.
+     *   - arrayFilters: A set of filters specifying to which array elements an update should apply.
+     *   - collation: Specifies a collation to use.
+     *   - upsert: When `true`, creates a new document if no document matches the query.
+     */
+    public init(filter: Document,
+                update: Document,
+                arrayFilters: [Document]? = nil,
+                collation: Document? = nil,
+                upsert: Bool? = nil) {
+        self.filter = filter
+        self.update = update
+        self.arrayFilters = arrayFilters
+        self.collation = collation
+        self.upsert = upsert
     }
 
-    public enum WriteModel {
-        case deleteOne(DeleteOneModel)
-        case deleteMany(DeleteManyModel)
-        case insertOne(InsertOneModel)
-        case replaceOne(ReplaceOneModel)
-        case updateOne(UpdateOneModel)
-        case updateMany(UpdateManyModel)
+    /**
+     * Adds the `updateOne` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `EncodingError` if an error occurs while encoding the options to BSON.
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
+        let opts = try encoder.encode(UpdateModelOptions(arrayFilters: self.arrayFilters,
+                                                              collation: self.collation,
+                                                              upsert: self.upsert))
+        var error = bson_error_t()
 
-        internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws -> BSONValue? {
-            switch self {
-            case let .deleteOne(model):
-                try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            case let .deleteMany(model):
-                try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            case let .insertOne(model):
-                return try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            case let .replaceOne(model):
-                try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            case let .updateOne(model):
-                try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            case let .updateMany(model):
-                try model.addToBulkWrite(bulk: bulk, encoder: encoder)
-            }
-
-            return nil
+        guard mongoc_bulk_operation_update_one_with_opts(bulk,
+                                                         self.filter._bson,
+                                                         self.update._bson,
+                                                         opts._bson,
+                                                         &error) else {
+            throw extractMongoError(error: error) // should be invalidArgumentError
         }
+    }
+}
+
+/// A model for an `updateMany` operation within a bulk write.
+public struct UpdateManyModel: Decodable {
+    /// A `Document` representing the match criteria.
+    public let filter: Document
+
+    /// A `Document` containing update operators.
+    public let update: Document
+
+    /// A set of filters specifying to which array elements an update should apply.
+    public let arrayFilters: [Document]?
+
+    /// A collation to use.
+    public let collation: Document?
+
+    /// When `true`, creates a new document if no document matches the query.
+    public let upsert: Bool?
+
+    /**
+     * Create a `updateMany` operation for a bulk write.
+     *
+     * - Parameters:
+     *   - filter: A `Document` representing the match criteria.
+     *   - update: A `Document` containing update operators.
+     *   - arrayFilters: A set of filters specifying to which array elements an update should apply.
+     *   - collation: Specifies a collation to use.
+     *   - upsert: When `true`, creates a new document if no document matches the query.
+     */
+    public init(filter: Document,
+                update: Document,
+                arrayFilters: [Document]? = nil,
+                collation: Document? = nil,
+                upsert: Bool? = nil) {
+        self.filter = filter
+        self.update = update
+        self.arrayFilters = arrayFilters
+        self.collation = collation
+        self.upsert = upsert
+    }
+
+    /**
+     * Adds the `updateMany` operation to a bulk write.
+     *
+     * - Throws:
+     *   - `EncodingError` if an error occurs while encoding the options to BSON.
+     *   - `UserError.invalidArgumentError` if the options form an invalid combination.
+     */
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws {
+        let opts = try encoder.encode(UpdateModelOptions(arrayFilters: self.arrayFilters,
+                                                              collation: self.collation,
+                                                              upsert: self.upsert))
+        var error = bson_error_t()
+
+        guard mongoc_bulk_operation_update_many_with_opts(bulk,
+                                                          self.filter._bson,
+                                                          self.update._bson,
+                                                          opts._bson,
+                                                          &error) else {
+            throw extractMongoError(error: error) // should be invalidArgumentError
+        }
+    }
+}
+
+public enum WriteModel<T: Codable> {
+    case deleteOne(DeleteOneModel)
+    case deleteMany(DeleteManyModel)
+    case insertOne(InsertOneModel<T>)
+    case replaceOne(ReplaceOneModel<T>)
+    case updateOne(UpdateOneModel)
+    case updateMany(UpdateManyModel)
+
+    internal func addToBulkWrite(bulk: OpaquePointer, encoder: BSONEncoder) throws -> BSONValue? {
+        switch self {
+        case let .deleteOne(model):
+            try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        case let .deleteMany(model):
+            try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        case let .insertOne(model):
+            return try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        case let .replaceOne(model):
+            try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        case let .updateOne(model):
+            try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        case let .updateMany(model):
+            try model.addToBulkWrite(bulk: bulk, encoder: encoder)
+        }
+
+        return nil
     }
 }
 
 /// A class encapsulating a `mongoc_bulk_operation_t`.
 internal struct BulkWriteOperation<T: Codable>: Operation {
     private let collection: MongoCollection<T>
-    private let models: [MongoCollection<T>.WriteModel]
+    private let models: [WriteModel<T>]
     internal let options: BulkWriteOptions?
 
     fileprivate let encoder: BSONEncoder
 
     /// Initializes the object from a `mongoc_collection_t` and `bson_t`.
-    fileprivate init(collection: MongoCollection<T>, models: [MongoCollection<T>.WriteModel], options: BulkWriteOptions?) {
+    fileprivate init(collection: MongoCollection<T>, models: [WriteModel<T>], options: BulkWriteOptions?) {
         self.collection = collection
         self.models = models
         self.options = options

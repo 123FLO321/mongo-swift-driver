@@ -252,7 +252,7 @@ private class BulkWriteTest: CrudTest {
         return BulkWriteOptions(ordered: ordered)
     }
 
-    private static func parseWriteModel(_ request: Document) throws -> WriteModel {
+    private static func parseWriteModel(_ request: Document) throws -> WriteModel<Document> {
         let name: String = try request.get("name")
         let args: Document = try request.get("arguments")
 
@@ -260,23 +260,23 @@ private class BulkWriteTest: CrudTest {
         case "deleteOne":
             let filter: Document = try args.get("filter")
             let collation = args["collation"] as? Document
-            return DeleteOneModel(filter, collation: collation)
+            return .deleteOne(DeleteOneModel(filter, collation: collation))
 
         case "deleteMany":
             let filter: Document = try args.get("filter")
             let collation = args["collation"] as? Document
-            return DeleteManyModel(filter, collation: collation)
+            return .deleteMany(DeleteManyModel(filter, collation: collation))
 
         case "insertOne":
             let document: Document = try args.get("document")
-            return InsertOneModel(document)
+            return .insertOne(InsertOneModel(document))
 
         case "replaceOne":
             let filter: Document = try args.get("filter")
             let replacement: Document = try args.get("replacement")
             let collation = args["collation"] as? Document
             let upsert = args["upsert"] as? Bool
-            return ReplaceOneModel(filter: filter, replacement: replacement, collation: collation, upsert: upsert)
+            return .replaceOne(ReplaceOneModel(filter: filter, replacement: replacement, collation: collation, upsert: upsert))
 
         case "updateOne":
             let filter: Document = try args.get("filter")
@@ -284,11 +284,11 @@ private class BulkWriteTest: CrudTest {
             let arrayFilters = args["arrayFilters"] as? [Document]
             let collation = args["collation"] as? Document
             let upsert = args["upsert"] as? Bool
-            return UpdateOneModel(filter: filter,
-                                  update: update,
-                                  arrayFilters: arrayFilters,
-                                  collation: collation,
-                                  upsert: upsert)
+            return .updateOne(UpdateOneModel(filter: filter,
+                                             update: update,
+                                             arrayFilters: arrayFilters,
+                                             collation: collation,
+                                             upsert: upsert))
 
         case "updateMany":
             let filter: Document = try args.get("filter")
@@ -296,11 +296,11 @@ private class BulkWriteTest: CrudTest {
             let arrayFilters = args["arrayFilters"] as? [Document]
             let collation = args["collation"] as? Document
             let upsert = args["upsert"] as? Bool
-            return UpdateManyModel(filter: filter,
-                                   update: update,
-                                   arrayFilters: arrayFilters,
-                                   collation: collation,
-                                   upsert: upsert)
+            return .updateMany(UpdateManyModel(filter: filter,
+                                               update: update,
+                                               arrayFilters: arrayFilters,
+                                               collation: collation,
+                                               upsert: upsert))
 
         default:
             throw TestError(message: "Unknown bulkWrite request name: \(name)")
