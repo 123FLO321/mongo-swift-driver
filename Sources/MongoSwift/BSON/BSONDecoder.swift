@@ -279,6 +279,14 @@ internal class _BSONDecoder: Decoder {
 
         return _BSONUnkeyedDecodingContainer(referencing: self, wrapping: arr)
     }
+    
+    fileprivate static func getKeyName(key: CodingKey) -> String {
+        if key.stringValue == "id" {
+            return "_id"
+        } else {
+            return key.stringValue
+        }
+    }
 }
 
 // Storage for a _BSONDecoder.
@@ -494,18 +502,18 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
 
     /// Returns a Boolean value indicating whether the decoder contains a value associated with the given key.
     public func contains(_ key: Key) -> Bool {
-        return self.container.hasKey(key.stringValue)
+        return self.container.hasKey(_BSONDecoder.getKeyName(key: key))
     }
 
     /// A string description of a CodingKey, for use in error messages.
     private func _errorDescription(of key: CodingKey) -> String {
-        return "\(key) (\"\(key.stringValue)\")"
+        return "\(key) (\"\(_BSONDecoder.getKeyName(key: key))\")"
     }
 
     /// Private helper function to check for a value in self.container. Returns the value stored
     /// under `key`, or throws an error if the value is not found.
     private func getValue(forKey key: Key) throws -> BSONValue {
-        guard let entry = try self.container.getValue(for: key.stringValue) else {
+        guard let entry = try self.container.getValue(for: _BSONDecoder.getKeyName(key: key)) else {
             throw DecodingError.keyNotFound(
                 key,
                 DecodingError.Context(codingPath: self.decoder.codingPath,
@@ -555,7 +563,7 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
                 DecodingError.Context(codingPath: self.decoder.codingPath,
                                       debugDescription: "Key \(_errorDescription(of: key)) not found."))
         }
-        return try self.container.getValue(for: key.stringValue) is BSONNull
+        return try self.container.getValue(for: _BSONDecoder.getKeyName(key: key)) is BSONNull
     }
 
     // swiftlint:disable line_length
@@ -606,7 +614,7 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
     /// Private method to create a superDecoder for the provided key.
     private func _superDecoder(forKey key: CodingKey) throws -> Decoder {
         return try self.decoder.with(pushedKey: key) {
-            guard let value = try self.container.getValue(for: key.stringValue) else {
+            guard let value = try self.container.getValue(for: _BSONDecoder.getKeyName(key: key)) else {
                 throw DecodingError.keyNotFound(key,
                                                 DecodingError.Context(
                                                     codingPath: self.decoder.codingPath,

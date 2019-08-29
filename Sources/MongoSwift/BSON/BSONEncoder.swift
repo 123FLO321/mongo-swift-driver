@@ -279,6 +279,14 @@ internal class _BSONEncoder: Encoder {
     public func singleValueContainer() -> SingleValueEncodingContainer {
         return self
     }
+    
+    fileprivate static func getKeyName(key: CodingKey) -> String {
+        if key.stringValue == "_id" {
+            return "id"
+        } else {
+            return key.stringValue
+        }
+    }
 }
 
 internal struct _BSONEncodingStorage {
@@ -349,9 +357,8 @@ private class _BSONReferencingEncoder: _BSONEncoder {
     /// Initializes `self` by referencing the given dictionary container in the given encoder.
     fileprivate init(referencing encoder: _BSONEncoder, key: CodingKey, wrapping dictionary: MutableDictionary) {
         self.encoder = encoder
-        self.reference = .dictionary(dictionary, key.stringValue)
+        self.reference = .dictionary(dictionary, _BSONEncoder.getKeyName(key: key))
         super.init(options: encoder.options, codingPath: encoder.codingPath)
-
         self.codingPath.append(key)
     }
 
@@ -532,39 +539,39 @@ private struct _BSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainer
         self.container = container
     }
 
-    public mutating func encodeNil(forKey key: Key) throws { self.container[key.stringValue] = BSONNull() }
-    public mutating func encode(_ value: Bool, forKey key: Key) throws { self.container[key.stringValue] = value }
-    public mutating func encode(_ value: Int, forKey key: Key) throws { self.container[key.stringValue] = value }
+    public mutating func encodeNil(forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = BSONNull() }
+    public mutating func encode(_ value: Bool, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
+    public mutating func encode(_ value: Int, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
     public mutating func encode(_ value: Int8, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
     public mutating func encode(_ value: Int16, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
-    public mutating func encode(_ value: Int32, forKey key: Key) throws { self.container[key.stringValue] = value }
-    public mutating func encode(_ value: Int64, forKey key: Key) throws { self.container[key.stringValue] = value }
+    public mutating func encode(_ value: Int32, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
+    public mutating func encode(_ value: Int64, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
     public mutating func encode(_ value: UInt, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
     public mutating func encode(_ value: UInt8, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
     public mutating func encode(_ value: UInt16, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
     public mutating func encode(_ value: UInt32, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
     public mutating func encode(_ value: UInt64, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
-    public mutating func encode(_ value: String, forKey key: Key) throws { self.container[key.stringValue] = value }
+    public mutating func encode(_ value: String, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
     public mutating func encode(_ value: Float, forKey key: Key) throws { try self.encodeNumber(value, forKey: key) }
-    public mutating func encode(_ value: Double, forKey key: Key) throws { self.container[key.stringValue] = value }
+    public mutating func encode(_ value: Double, forKey key: Key) throws { self.container[_BSONEncoder.getKeyName(key: key)] = value }
 
     private mutating func encodeNumber<T: CodableNumber>(_ value: T, forKey key: Key) throws {
         // put the key on the codingPath in case the attempt to convert the number fails and we throw
         self.encoder.codingPath.append(key)
         defer { self.encoder.codingPath.removeLast() }
-        self.container[key.stringValue] = try encoder.boxNumber(value)
+        self.container[_BSONEncoder.getKeyName(key: key)] = try encoder.boxNumber(value)
     }
 
     public mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
         self.encoder.codingPath.append(key)
         defer { self.encoder.codingPath.removeLast() }
-        self.container[key.stringValue] = try encoder.box(value)
+        self.container[_BSONEncoder.getKeyName(key: key)] = try encoder.box(value)
     }
 
     public mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type,
                                                     forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
         let dictionary = MutableDictionary()
-        self.container[key.stringValue] = dictionary
+        self.container[_BSONEncoder.getKeyName(key: key)] = dictionary
 
         self.codingPath.append(key)
         defer { self.codingPath.removeLast() }
@@ -576,7 +583,7 @@ private struct _BSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainer
 
     public mutating func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
         let array = MutableArray()
-        self.container[key.stringValue] = array
+        self.container[_BSONEncoder.getKeyName(key: key)] = array
 
         self.codingPath.append(key)
         defer { self.codingPath.removeLast() }

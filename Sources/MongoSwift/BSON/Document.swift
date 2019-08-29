@@ -489,6 +489,28 @@ extension Document: CustomStringConvertible {
 
 /// An extension of `Document` to add the capability to be initialized with a dictionary literal.
 extension Document: ExpressibleByDictionaryLiteral {
+    
+    /**
+     * Initializes a `Document` using a dictionary  where the
+     * keys are `String`s and the values are `BSONValue`s. For example:
+     * `d = Document(dictionary: ["a" : 1 ])`
+     *
+     * - Parameters:
+     *   - dictionary: a [String: BSONValue]
+     *
+     * - Returns: a new `Document`
+     */
+    public init(dictionary keyValuePairs: [String: BSONValue]) {
+        self._storage = DocumentStorage()
+        for (key, value) in keyValuePairs {
+            do {
+                try self.setValue(for: key, to: value, checkForKey: false)
+            } catch {
+                fatalError("Error setting key \(key) to value \(String(describing: value)): \(error)")
+            }
+        }
+    }
+    
     /**
      * Initializes a `Document` using a dictionary literal where the
      * keys are `String`s and the values are `BSONValue`s. For example:
@@ -500,7 +522,6 @@ extension Document: ExpressibleByDictionaryLiteral {
      * - Returns: a new `Document`
      */
     public init(dictionaryLiteral keyValuePairs: (String, BSONValue)...) {
-        // make sure all keys are unique
         guard Set(keyValuePairs.map { $0.0 }).count == keyValuePairs.count else {
             fatalError("Dictionary literal \(keyValuePairs) contains duplicate keys")
         }
